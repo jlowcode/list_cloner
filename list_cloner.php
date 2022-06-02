@@ -26,24 +26,23 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
     protected $clones_info = array();
 
     public function onAfterProcess()
-    {
+    {   
+        //Comentado pelo Autor
         //$formModel = $this->getModel();
         //$this->data = $this->getProcessData();
         //$formModel->formData = $this->data;
 
-
-
         $this->user = JFactory::getUser();
 
         $formModel = $this->getModel();
-        $formData = $formModel->formData;
+        $formData = $formModel->formDataWithTableName; // Alterado de $formModel->formData
         $listName = $formModel->getTableName();
         $this->rowId = $formData[$listName . '___id'];
         $fields = $this->getFieldsAdministrator();
         $this->listaPrincipal = $fields->lista_principal;
 
         if ($fields->lista_principal) {
-            $this->clone_process($fields->lista_principal);
+            $this->clone_process($fields->lista_principal, 0);
         }
 
         $update = array();
@@ -52,10 +51,11 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         $update = (Object) $update;
         JFactory::getDbo()->updateObject($listName, $update, 'id');
 
+        //Comentado pelo Autor
         //$this->clone_process($fields->lista_principal, true);
 
         if ($this->suggestId) {
-            $this->clone_process($this->suggestId, true);
+            $this->clone_process($this->suggestId, 0, true);
             $db = JFactory::getDbo();
             $query = $db->getQuery(true);
             $query->select('params')->from("#__fabrik_elements")->where('id = ' . (int) $this->suggestElementId);
@@ -96,8 +96,10 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         }
 
         if ($fields->listas_auxiliares) {
+            $x = 1;
             foreach ($fields->listas_auxiliares as $item) {
-                $this->clone_process($item);
+                $this->clone_process($item, $x);
+                $x++;
             }
         }
 
@@ -147,10 +149,11 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         $params = $this->getParams();
         $formModel = $this->getModel();
         $elementModel = FabrikWorker::getPluginManager();
+        $listName = $formModel->getTableName();
 
         $linkModel = $elementModel->getElementPlugin($params->get('list_link'))->element;
         $modeloModel = $elementModel->getElementPlugin($params->get('modelo'))->element;
-        $tituloModel = $elementModel->getElementPlugin($params->get('titulo'))->element;
+        //$tituloModel = $elementModel->getElementPlugin($params->get('titulo'))->element; //Atualização Nomes
 
         $listaModelo = $params->get('list_cloner_lista_modelo');
         $elementNamelistaPrincipal = $params->get('list_cloner_element_name_lista_principal');
@@ -159,9 +162,10 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         $fields = new stdClass();
         $fields->link = $linkModel->name;
         $fields->modelo = $modeloModel->name;
-        $fields->titulo = $formModel->formData[$tituloModel->name];
+        $fields->titulo = null;
+        //$fields->titulo = $formModel->formData[$listName. '___name'];  //Atualização Nomes
 
-        $idModelo = $formModel->formData[$fields->modelo];
+        $idModelo = $formModel->formDataWithTableName[$listName. '___' . $fields->modelo];
         if (is_array($idModelo)) {
             $idModelo = $idModelo[0];
         }
@@ -182,11 +186,16 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
     protected function checkTableName ($name) {
         $db = JFactory::getDbo();
 
-        $name = $this->user->id . '_' . $name;
+        //$name = $this->user->id . '_' . $name; //Atualização Nomes
+        $name = strtolower(str_replace(' ', '_', $name));
         $continue = false;
         $flag = 1;
         while ($continue === false) {
-            $db->setQuery("SHOW TABLES LIKE '{$name}_{$flag}'");
+            if($flag == 1) {
+                $db->setQuery("SHOW TABLES LIKE '{$name}'");
+            } else {
+                $db->setQuery("SHOW TABLES LIKE '{$name}_{$flag}'");
+            }
             $result = $db->loadResult();
             if ($result) {
                 $flag++;
@@ -195,13 +204,31 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
             }
         }
 
-        return $name . "_{$flag}";
+        if($flag == 1) {
+            $result = $name;
+        } else {
+            $result = $name . "_{$flag}";
+        }
+
+        return $result;
     }
 
-    protected function clone_process($listId, $is_suggest = false) {
+    // $id Adicionada pela "Atualização Nomes"
+    protected function clone_process($listId, $id, $is_suggest = false) {
         $listModel = JModelLegacy::getInstance('List', 'FabrikFEModel');
         $listModel->setId($listId);
         $formModel = $listModel->getFormModel();
+
+        //INICIO - Atualização Nomes List_Cloner
+        $formModelData = $this->getModel();
+        $listName = $formModelData->getTableName();
+
+        if($id == 0) {
+            $id = 'principal';
+        } else {
+            $id = 'auxiliar_' . $id;
+        }
+        //FIM - Atualização Nomes List_Cloner
 
         $info = new stdClass();
         $info->mappedGroups = array();
@@ -209,7 +236,7 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         $info->elementsRepeat = array();
         $info->newListJoinsIds = array();
         $info->old_db_table_name = $formModel->getTableName();
-        $info->db_table_name = $this->checkTableName($formModel->getTableName());
+        $info->db_table_name = $this->checkTableName($formModelData->formDataWithTableName[$listName . '___table_name_' . $id]);
 
         if ($is_suggest) {
             $info->old_db_table_name = $this->clones_info[$this->listaPrincipal]->old_db_table_name;
@@ -223,8 +250,8 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
             $this->setUserGroup($listId);
         }
 
-        $a = $this->cloneForm($formModel->getTable(), $listId, $is_suggest);
-        $b = $this->cloneList($listModel->getTable(), $listId, $is_suggest);
+        $a = $this->cloneForm($formModel->getTable(), $listId, $id, $is_suggest);
+        $b = $this->cloneList($listModel->getTable(), $listId, $id, $is_suggest);
         $c = $this->cloneGroupsAndElements($formModel->getGroupsHiarachy(), $listId);
 
         if (!$is_suggest) {
@@ -232,11 +259,17 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         }
     }
 
-    protected function cloneForm($data, $listId, $is_suggest = false) {
+    // $id Adicionada pela "Atualização Nomes"
+    protected function cloneForm($data, $listId, $id, $is_suggest = false) {
         $db = JFactory::getDbo();
         $fields_adm = $this->getFieldsAdministrator();
 
-        //$data = $this->clones_info[$listId]->formData->getTable();
+        //INICIO - Atualização Nomes List_Cloner
+        $formModelData = $this->getModel();
+        $listName = $formModelData->getTableName();
+        //FIM - Atualização Nomes List_Cloner
+
+        //$data = $this->clones_info[$listId]->formData->getTable();    //Comentado pelo Autor
         $this->clones_info[$listId]->formParams = json_decode($data->params);
 
         $cloneData = new stdClass();
@@ -245,7 +278,8 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
             $cloneData->label = $fields_adm->titulo;
         }
         else {
-            $cloneData->label = $data->label;
+            //$cloneData->label = $data->label; //Atualização Nomes
+            $cloneData->label = $formModelData->formDataWithTableName[$listName . '___list_name_' . $id];
         }
         if ($is_suggest) {
             $cloneData->label .= ' - Revisão';
@@ -281,11 +315,17 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         return true;
     }
 
-    protected function cloneList($data, $listId, $is_suggest = false) {
+    // $id Adicionada pela "Atualização Nomes"
+    protected function cloneList($data, $listId, $id, $is_suggest = false) {
         $db = JFactory::getDbo();
         $fields_adm = $this->getFieldsAdministrator();
-        //$data = $this->clones_info[$listId]->listModel->getTable();
+        //$data = $this->clones_info[$listId]->listModel->getTable();  //Comentado pelo Autor
 
+        //INICIO - Atualização Nomes List_Cloner
+        $formModelData = $this->getModel();
+        $listName = $formModelData->getTableName();
+        //FIM - Atualização Nomes List_Cloner
+        
         $this->clones_info[$listId]->listParams = json_decode($data->params);
         $this->clones_info[$listId]->orderByList = $data->order_by;
 
@@ -295,7 +335,8 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
             $cloneData->label = $fields_adm->titulo;
         }
         else {
-            $cloneData->label = $data->label;
+            //$cloneData->label = $data->label; //Atualização Nomes
+            $cloneData->label = $formModelData->formDataWithTableName[$listName . '___list_name_' . $id];
         }
         if ($is_suggest) {
             $cloneData->label .= ' - Revisão';
@@ -320,7 +361,7 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         $cloneData->hits = $data->hits;
         $cloneData->rows_per_page = $data->rows_per_page;
         $cloneData->template = $data->template;
-        //$cloneData->order_by = $data->order_by;
+        //$cloneData->order_by = $data->order_by;   //Comentado pelo Autor
         $cloneData->order_dir = $data->order_dir;
         $cloneData->filter_action = $data->filter_action;
         $cloneData->group_by = $data->group_by;
@@ -343,9 +384,8 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
         $db = JFactory::getDbo();
         $ordering = 1;
 
-        //$groups = $this->clones_info[$listId]->formModel->getGroupsHiarachy();
+        //$groups = $this->clones_info[$listId]->formModel->getGroupsHiarachy();    //Comentado pelo Autor
         foreach ($groups as $groupModel) {
-
             $cloneData = $groupModel->getGroup()->getProperties();
             unset($cloneData['join_id']);
             $cloneData = (Object) $cloneData;
@@ -393,7 +433,7 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
     protected function cloneElements($elementsModel, $group_id, $listId) {
         $db = JFactory::getDbo();
         $fields_adm = $this->getFieldsAdministrator();
-        //$ordering = 1;
+        //$ordering = 1;    //Comentado pelo Autor
 
         foreach ($elementsModel as $elementModel) {
             $cloneData = $elementModel->getElement()->getProperties();
@@ -405,7 +445,7 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
             $cloneData->created_by = $this->user->id;
             $cloneData->created_by_alias = $this->user->username;
             $cloneData->modified = date('Y-m-d H:i:s');
-            //$cloneData->ordering = $ordering;
+            //$cloneData->ordering = $ordering;     //Comentado pelo Autor
 
             $params = json_decode($cloneData->params);
             if ($cloneData->plugin === 'databasejoin') {
@@ -500,7 +540,7 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
                 return false;
             }
 
-            //$ordering++;
+            //$ordering++;  //Comentado pelo Autor
         }
 
         return true;
@@ -718,6 +758,7 @@ class PlgFabrik_FormList_cloner extends PlgFabrik_Form
             $data2->elemento_destino = $newData2;
             $formParams['list_elemento_destino'] = json_encode($data2);
 
+            //Comentado pelo Autor
             //$formParams['elemento_origem'] = (string) $mappedElements[$formParams['elemento_origem']];
             //$formParams['elemento_destino'] = (string) $mappedElements[$formParams['elemento_destino']];
         }

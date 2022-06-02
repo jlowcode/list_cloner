@@ -10,11 +10,13 @@
                    type="listfields"
             />
 
-            <field name="titulo"
+            <!-- INICIO - Atualização Nomes List_Cloner -->  
+            <!--<field name="titulo"
                    label="PLG_FABRIK_FORM_LIST_CLONER_TITULO_LABEL"
                    description="PLG_FABRIK_FORM_LIST_CLONER_TITULO_DESC"
                    type="listfields"
-            />
+            />-->
+            <!-- FIM - Atualização Nomes List_Cloner -->
 
             <field name="modelo"
                    label="PLG_FABRIK_FORM_LIST_CLONER_MODELO_LABEL"
