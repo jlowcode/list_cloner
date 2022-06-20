@@ -265,3 +265,37 @@ Por fim, clique em Save & Close, além disso, a configuração básica deste ite
 Por fim, clique em Save e, se tudo ocorreu corretamente nos passos anteriores, todos os relacionamentos deste modelo serão clonados, para averiguar o processo vá nas listas e formulários do fabrik no administrador do Joomla.</p>
 
 ![Teste Clonagem](Images/35.png)
+
+## Atualizações
+
+### 1. Definição de nomes
+
+<p style="text-align: justify">A primeira atualização solicitada para este plugin é referente aos nomes padrões adicionados tanto nos relacionamentos da lista principal, quanto nas tabelas que são criadas no banco de dados, nesse sentido, foi solicitado que ao serem preenchidos os dados de clonagem também fosse possível nomear cada lista e tabela clonada. Para isso, algumas configurações são necessárias.</p>
+
+#### Configurações Adicionais
+
+1. Retirar elementos do formulário
+
+<p style="text-align: justify">Como o nome será dado para cada relacionamento e para a lista principal o elemento de nome e de descrição criado nos itens 3.2.2 e 3.2.3 deste tutorial não serão mais necessários, dessa forma, vá no administrator do Joomla em Componets->Fabrik->Elements e no canto inferior esquerdo utilize o filtro --Select form-- para filtrar pelo formulário criado na etapa 3.1. Após isso, procure pelo elemento name e description e despublique ambos na coluna Publised à direita da tela, como segue abaixo.</p>
+
+![Retirar Elementos](Images/36.png)
+
+2. Instalar a atualização
+
+<p style="text-align: justify">Como o código principal do plugin precisou ser alterado para que aceitasse este tipo de atualização será preciso realizar novamente o procedimento explicitado no item de Instalação, no início deste tutorial, porém com o arquivo .rar da segunda branch deste repositório(List_Cloner_Update).</p>
+
+3. Adicionar arquivos extras
+
+<p style="text-align: justify">Visto que é necessário a obtenção dos relacionamentos da lista principal antes da inserção dos nomes de cada lista e tabela criadas, foi de extrema importância a criação de dois arquivos extras para o correto funcionamento do código. Estes arquivos presentes na branch atualizada devem estar nos seguintes caminhos da instalação do Joomla: </p>
+
+    form_25.js -> web\components\com_fabrik\js\form_25.js ***
+
+    nomesListCloner.php -> web\components\com_fabrik\nomesListCloner.php
+
+*** Este arquivo deverá ser renomeado com o id do formulário criado no item 3.1 deste tutorial para que o fabrik reconheça este código como parte desse único formulário em questão.
+
+4. Adicionar elemento
+
+<p style="text-align: justify">Também foi solicitada nesta atualização um botão junto que junto com a clonagem também realizasse a inserção das listas clonadas no menu diretamente. Nesse sentido, é necessário realizar a criação de outro elemento no formulário de clonagem como realizados nas etapas anteriores. Este novo elemento deve ter as seguintes configurações.</p>
+
+!["Elemento de Menu"](Images/37.png)
