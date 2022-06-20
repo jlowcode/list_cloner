@@ -11,7 +11,7 @@
     <help url="PLG_FORM_LIST_CLONER_HELP_SERVER"/>
     <description>PLG_FORM_LIST_CLONER_DESCRIPTION</description>
     <files>
-        <filename plugin="list_cloner_update">list_cloner.php</filename>
+        <filename plugin="list_cloner">list_cloner.php</filename>
         <filename>index.html</filename>
         <folder>forms</folder>
         <folder>language</folder>
